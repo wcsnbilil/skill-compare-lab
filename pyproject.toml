@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "skill-compare-lab"
+version = "0.1.0"
+description = "Compare coding skill instructions with repeatable tasks and inspectable evidence."
+readme = "README.md"
+requires-python = ">=3.11"
+license = {file = "LICENSE"}
+authors = [{name = "wcsnbilil"}]
+dependencies = []
+
+[project.scripts]
+skill-compare = "skill_compare_lab.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["skill_compare_lab*"]
+
+[tool.setuptools.package-data]
+skill_compare_lab = ["*.css"]
+
+[tool.ruff]
+line-length = 100
+extend-exclude = ["runs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
