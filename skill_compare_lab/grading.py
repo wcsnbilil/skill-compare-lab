@@ -15,16 +15,12 @@ DOCKER_IMAGE = "python:3.12-slim"
 
 
 def grade(task: Task, code: str, folder: Path, executor: str, timeout=15):
+    if executor not in {"docker", "local"}:
+        raise ValueError("executor must be docker or local.")
     folder.mkdir()
     (folder / "solution.py").write_text(code, encoding="utf-8")
-    checker = (
-        "import sys, unittest\n"
-        "sys.path.insert(0, '/work' if sys.platform != 'win32' and "
-        "__file__.startswith('/work/') else __import__('os').path.dirname(__file__))\n"
-        "from solution import *\n" + task.tests + "\nif __name__ == '__main__':\n"
-        "    unittest.main(verbosity=2)\n"
-    )
-    (folder / "check.py").write_text(checker, encoding="utf-8")
+    (folder / "contract_tests.py").write_text(task.tests, encoding="utf-8")
+    shutil.copyfile(Path(__file__).with_name("_grade_submission.py"), folder / "check.py")
     container_name = "skill-compare-" + uuid.uuid4().hex
     if executor == "docker":
         argv = [
@@ -86,20 +82,40 @@ def grade(task: Task, code: str, folder: Path, executor: str, timeout=15):
                 check=False,
                 env=env,
             )
-    log = (folder / "stderr.txt").read_text(encoding="utf-8", errors="replace")
     if executor == "docker" and execution["returncode"] in {125, 126, 127}:
         raise ValueError("Docker grading could not start; see grading/stderr.txt.")
-    # A bare sys.exit(0) is not a passing test run.
-    import re
-
-    counts = re.findall(r"^Ran (\d+) tests? in ", log, re.MULTILINE)
-    expected = task.tests.count("    def test_")
-    ran = int(counts[-1]) if counts else 0
+    # Read unittest's actual discovery/execution counts, not indentation or stderr wording.
+    summary = None
+    fields = {
+        "tests_expected",
+        "tests_run",
+        "failures",
+        "errors",
+        "skipped",
+        "expected_failures",
+        "unexpected_successes",
+    }
+    for line in (folder / "stdout.txt").read_text(encoding="utf-8", errors="replace").splitlines():
+        if line.startswith("SKILL_COMPARE_GRADE="):
+            try:
+                value = json.loads(line.removeprefix("SKILL_COMPARE_GRADE="))
+            except json.JSONDecodeError:
+                continue
+            if (
+                isinstance(value, dict)
+                and value.keys() == fields
+                and all(type(v) is int and v >= 0 for v in value.values())
+            ):
+                summary = value
+    expected = summary["tests_expected"] if summary else None
+    ran = summary["tests_run"] if summary else 0
     passed = (
         not execution["timed_out"]
         and execution["returncode"] == 0
+        and expected is not None
+        and expected > 0
         and ran == expected
-        and log.rstrip().endswith("OK")
+        and all(summary[key] == 0 for key in fields - {"tests_expected", "tests_run"})
     )
     result = {
         **execution,
@@ -107,12 +123,15 @@ def grade(task: Task, code: str, folder: Path, executor: str, timeout=15):
         "tests_run": ran,
         "tests_expected": expected,
         "executor": executor,
+        "summary": summary,
     }
     (folder / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
     return result
 
 
 def check_executor(executor: str):
+    if executor not in {"docker", "local"}:
+        raise ValueError("executor must be docker or local.")
     if executor == "docker":
         if not shutil.which("docker"):
             raise ValueError(

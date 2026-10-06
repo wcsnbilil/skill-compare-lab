@@ -13,7 +13,8 @@ from . import __version__
 from .grading import check_executor, grade
 from .report import write_report
 from .runners import codex_run, demo_run
-from .tasks import TASKS, Task
+from .task_packs import load_task_pack, select_tasks
+from .tasks import Task
 
 
 def digest(text: str):
@@ -78,6 +79,7 @@ def run_experiment(
     mode="live",
     task_ids=(),
     progress=print,
+    pack_path=None,
 ):
     if mode not in {"live", "demo"} or executor not in {"local", "docker"}:
         raise ValueError("Unsupported mode or executor.")
@@ -89,10 +91,10 @@ def run_experiment(
         raise ValueError("Choose an explicit --model for a reproducible live comparison.")
     if output.exists():
         raise ValueError(f"Output already exists: {output}. Choose a new directory.")
-    unknown = set(task_ids) - {t.id for t in TASKS}
-    if unknown:
-        raise ValueError(f"Unknown task IDs: {', '.join(sorted(unknown))}")
-    tasks = [t for t in TASKS if not task_ids or t.id in task_ids]
+    if mode == "demo" and pack_path is not None:
+        raise ValueError("demo uses bundled fixtures only. Use validate-pack for custom tasks.")
+    pack = load_task_pack(pack_path)
+    tasks = select_tasks(pack, task_ids)
     variants = [{"label": "No injected skill", "text": "", "sha256": digest("")}]
     if mode == "demo":
         variants += [
@@ -145,6 +147,7 @@ def run_experiment(
             {"id": t.id, "title": t.title, "sha256": digest(json.dumps(asdict(t), sort_keys=True))}
             for t in tasks
         ],
+        "task_pack": {"name": pack.name, "source": pack.source, "sha256": pack.sha256()},
         "status": "running",
     }
     if executor == "docker":
@@ -160,6 +163,7 @@ def run_experiment(
         manifest["docker_image"] = DOCKER_IMAGE
         manifest["docker_image_id"] = image.stdout.strip()
     write_json(output / "manifest.json", manifest)
+    write_json(output / "task-snapshot.json", pack.snapshot())
     for i, variant in enumerate(variants):
         (output / f"v{i}-skill.md").write_text(variant["text"], encoding="utf-8")
     rows = []

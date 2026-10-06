@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "name": "Text cleanup repairs",
+  "tasks": [
+    {
+      "id": "slug-cleanup",
+      "title": "Keep accented titles readable",
+      "contract": "Repair slugify(text). Convert a string to a lowercase ASCII slug: use Unicode NFKD normalization to preserve decomposable accented Latin letters as ASCII, discard combining marks, replace each run of other non-alphanumeric characters with one hyphen, and strip leading/trailing hyphens. Keep digits. Return an empty string when there are no ASCII letters or digits. Examples: 'Café déjà vu!' becomes 'cafe-deja-vu'; 'Hello___World' becomes 'hello-world'.",
+      "starter": "starter.py",
+      "tests": "contract_tests.py",
+      "reference": "reference.py"
+    }
+  ]
+}

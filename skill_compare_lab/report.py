@@ -58,7 +58,7 @@ def write_report(directory: Path):
     if manifest.get("schema_version") != 1:
         raise ValueError("Unsupported result schema.")
     for row in rows:
-        if not re.fullmatch(r"[a-z0-9]+-v[0-9]+-r[0-9]+", row["id"]):
+        if not re.fullmatch(r"[a-z0-9][a-z0-9_-]*-v[0-9]+-r[0-9]+", row["id"]):
             raise ValueError("Invalid trial ID in results.")
         if row["status"] not in STATUSES:
             raise ValueError("Invalid trial status in results.")
@@ -164,6 +164,7 @@ def write_report(directory: Path):
         "Small samples do not establish a universally better skill."
     )
     state = manifest["status"]
+    pack_name = manifest.get("task_pack", {}).get("name", "Bundled Python repairs")
     completeness = (
         "All scheduled trials finished."
         if state == "complete"
@@ -193,6 +194,7 @@ content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inlin
 <p class="notice">{warning}</p>
 <div class="protocol"><span><b>Model</b> {esc(manifest["model"])}</span>
 <span><b>Grader</b> {esc(manifest["executor"])}</span>
+<span><b>Task pack</b> {esc(pack_name)}</span>
 <span><b>Completed attempts</b> {len(rows)} / {esc(manifest["planned_trials"])}</span>
 <span><b>Order seed</b> {esc(manifest["seed"])}</span></div>
 <p class="completion">{esc(completeness)}</p>
@@ -227,8 +229,8 @@ This is an observed comparison, not a significance test.</p>
 <details class="method"><summary>Method, provenance &amp; limits</summary>
 <p>SKILL.md text is injected into the task prompt. Native discovery and supporting scripts
 are not evaluated. Codex configuration is inherited; global instructions can affect all conditions.
-Tasks are public, small Python exercises. Neither task secrecy nor resistance to grader
-manipulation is claimed. Only compare trusted instruction-only skills.</p>
+Tasks are single-module Python repairs from the selected task pack. Neither task secrecy
+nor resistance to grader manipulation is claimed. Only use trusted task packs and skills.</p>
 <p>Repeated task IDs are paired, but model calls are independent. The order seed shuffles
 execution; it does not make model output deterministic. Inspect the original run folder
 before sharing: prompts and logs can contain private skill text.</p>
