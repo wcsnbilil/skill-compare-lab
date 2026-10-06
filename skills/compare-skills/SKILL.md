@@ -12,6 +12,13 @@ directory. The tool automatically includes a no-injected-skill baseline.
 Use at least three repeats for an exploratory comparison; the order seed is
 not a model determinism guarantee.
 
+When the user provides their own tasks, use --pack and read docs/task-packs.md
+from this repository for its format. List the pack before running it. If reference
+solutions are available, use validate-pack to check reference passes and starter
+failures without model calls. Listing does not execute code; validation does.
+Keep the same selected task IDs across conditions. The tool records a task snapshot
+and hash; inspect these when comparing or reproducing runs.
+
 Use demo to explain the workflow without model calls. Demo fixtures are
 scripted examples, so describe their results only as a pipeline demonstration.
 Live runs send skill contents to the configured model and consume its usage.

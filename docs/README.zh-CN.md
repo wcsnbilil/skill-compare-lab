@@ -26,6 +26,20 @@ skill-compare run --skill examples/skills/contract-first --skill examples/skills
 
 `--skill` 接受 SKILL.md 或所在目录，目录名称要不同。替换为自己的 Skill 即可比较。每次选择新的输出目录，已有结果不会被覆盖。
 
+## 用你自己的任务
+
+准备一个 JSON 配置，写明任务说明，并指向初始代码、unittest 测试和可选的参考解答。无需修改工具源码：
+
+```sh
+skill-compare tasks --pack examples/task-packs/text-cleanup/pack.json
+skill-compare validate-pack examples/task-packs/text-cleanup/pack.json --output runs/pack-check
+skill-compare run --pack examples/task-packs/text-cleanup/pack.json --skill examples/skills/contract-first --model YOUR_MODEL_ID --output runs/my-tasks
+```
+
+`tasks` 只读取配置，不执行代码。`validate-pack` 不调用模型，会检查参考解答通过全部测试、初始代码确实失败，默认通过 Docker 运行。这个校验命令要求提供参考解答；真实比较可以不提供。
+
+报告记录任务包名称和内容哈希；本地快照保存实际读取的任务定义。模型 prompt 只包含任务说明、初始代码和 Skill，不包含测试和参考解答。当前支持单文件 Python 与标准库 unittest。完整格式见[任务包指南](task-packs.md)。
+
 ## 怎么读结果
 
 - **Passed / attempted**：通过全部测试的次数 / 已尝试次数，超时和运行错误也会保留。

@@ -10,7 +10,7 @@ class Task:
     contract: str
     starter: str
     tests: str
-    reference: str
+    reference: str | None = None
 
 
 TASKS = (
